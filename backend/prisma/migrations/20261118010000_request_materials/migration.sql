@@ -1,0 +1,26 @@
+ALTER TYPE "RequestStatus" ADD VALUE 'PENDIENTE_MATERIAL' BEFORE 'HABILITADA_PAGO';
+ALTER TYPE "RequestStatus" ADD VALUE 'REVISION_MATERIAL' BEFORE 'HABILITADA_PAGO';
+ALTER TYPE "RequestStatus" ADD VALUE 'CORRECCION_MATERIAL' BEFORE 'HABILITADA_PAGO';
+ALTER TYPE "RequestAction" ADD VALUE 'ESPECIFICACIONES_ENVIADAS';
+ALTER TYPE "RequestAction" ADD VALUE 'ADJUNTO_AGREGADO';
+ALTER TYPE "RequestAction" ADD VALUE 'ADJUNTO_RETIRADO';
+ALTER TYPE "RequestAction" ADD VALUE 'EVIDENCIA_ENVIADA';
+ALTER TYPE "RequestAction" ADD VALUE 'CORRECCION_MATERIAL_SOLICITADA';
+ALTER TYPE "RequestAction" ADD VALUE 'EVIDENCIA_APROBADA';
+CREATE TYPE "AttachmentCategory" AS ENUM ('IDENTIFICACION', 'ESCRITURA', 'CARTA', 'REPRESENTACION', 'EVIDENCIA');
+CREATE TYPE "MaterialDiameter" AS ENUM ('MEDIA_PULGADA', 'TRES_CUARTOS');
+ALTER TABLE "ServiceRequest" ADD COLUMN "specification" TEXT, ADD COLUMN "diameter" "MaterialDiameter";
+CREATE TABLE "RequestAttachment" (
+    "id" TEXT NOT NULL,
+    "requestId" TEXT NOT NULL,
+    "category" "AttachmentCategory" NOT NULL,
+    "filename" TEXT NOT NULL,
+    "mime" TEXT NOT NULL,
+    "size" INTEGER NOT NULL,
+    "content" BYTEA NOT NULL,
+    "version" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "RequestAttachment_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "RequestAttachment_requestId_fkey" FOREIGN KEY ("requestId") REFERENCES "ServiceRequest"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+CREATE INDEX "RequestAttachment_requestId_category_idx" ON "RequestAttachment"("requestId", "category");

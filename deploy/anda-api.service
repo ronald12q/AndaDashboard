@@ -1,0 +1,23 @@
+[Unit]
+Description=API del portal académico ANDA
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=anda
+Group=anda
+WorkingDirectory=/srv/anda/backend
+EnvironmentFile=/etc/anda/api.env
+ExecStart=/usr/bin/node /srv/anda/backend/dist/index.js
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=20s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,21 @@
+# El RAG se desarrolla y versiona en su propio repositorio.
+/Rag-project/
+
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.tsbuildinfo
+*.log
+.env
+.env.*
+!.env.example
+*.local
+.venv/
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+.DS_Store
+playwright-report/
+test-results/

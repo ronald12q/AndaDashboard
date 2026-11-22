@@ -1,0 +1,15 @@
+import { services, money, serviceFor } from '../data'
+import { Card, Heading, Notice } from '../components/ui'
+
+export function Catalog({ serviceId }: { serviceId?: string }) {
+  if (serviceId && !services.some(s => s.id === serviceId)) return <Heading title="Trámite no encontrado" action={<a href="#/catalogo">Volver al catálogo</a>} />
+  if (!serviceId) return <><Heading title="¿Qué trámite necesitas?" subtitle="Consulta la información antes de iniciar tu solicitud." /><div className="catalog-grid">{services.map((s, i) => <Card key={s.id}><span className="badge">{String(i + 1).padStart(2, '0')}</span><h2>{s.name}</h2><p>{s.description}</p><a className="button secondary" href={`#/requisitos/${s.id}`}>Ver requisitos</a></Card>)}</div></>
+  const service = serviceFor(serviceId)
+  return <><Heading title={service.name} subtitle="Conoce los pasos y condiciones antes de comenzar." /><div className="columns wide-left"><Card className="requirements"><h2>¿Qué incluye?</h2><p>{service.description} {service.material && 'La compra del material se gestiona por separado.'}</p><h3>{service.material ? 'Antes de comprar' : 'Antes de solicitar'}</h3><p>{service.material ? 'Primero registra la solicitud. Recibirás las especificaciones correspondientes a tu servicio después de la revisión.' : 'Registra la cuenta del servicio, dirección, contacto y motivo. El personal realizará una revisión manual simulada antes de habilitar el pago.'}</p>
+    {service.id === 'medidor' && <p>Referencia académica: medidor metálico conforme a ISO 4064. El administrador confirma el diámetro residencial (½ o ¾ de pulgada) para cada cuenta.</p>}
+    {service.id === 'valvula' && <p>El administrador confirma las características y el diámetro residencial de ½ o ¾ de pulgada. No compres antes de recibir las especificaciones.</p>}
+    {service.id === 'caja' && <p>La compatibilidad de la caja se determina tras revisar el servicio. No se prescriben dimensiones genéricas.</p>}
+    {service.id === 'desconexion' && <><h3>Documentos de prueba</h3><ul><li>Identificación del solicitante.</li><li>Escritura del inmueble y carta justificativa.</li><li>Representación, si actúas por un tercero.</li></ul><p>La facturación continúa hasta la ejecución en campo. La desconexión definitiva puede requerir presupuesto y permiso de rotura.</p></>}
+    <Notice>{service.material ? 'La revisión de fotografías es preliminar. El técnico verifica físicamente el material durante la visita y lo recibe en el domicilio (propuesta académica).' : 'Este portal no consulta NIS reales ni determina condiciones institucionales. Todos los documentos y resultados son ficticios.'}</Notice>
+    </Card><Card className="price-card"><p>{service.material ? 'Instalación' : 'Servicio'}</p><strong className="price">{money(service.price)}</strong><p>Importe de referencia con IVA</p><p>{service.material && 'El material no está incluido. '}Tarifa de referencia demo, no vigente confirmada. El importe del caso se confirma antes del pago simulado.</p><a className="button" href={`#/crear/${service.id}`}>Iniciar solicitud</a></Card></div></>
+}

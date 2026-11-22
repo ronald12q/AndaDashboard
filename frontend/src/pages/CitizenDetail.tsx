@@ -1,0 +1,44 @@
+import { useState } from 'react'
+import type { Request, UpdateRequest } from '../data'
+import { downloadPdf, money, receipt, serviceFor } from '../data'
+import { Badge, Card, Field, FilePicker, FilesList, Heading, History, Notice } from '../components/ui'
+
+export function CitizenDetail({ request: r, view, update }: { request: Request; view: string; update: UpdateRequest }) {
+  const s = serviceFor(r.service)
+  const [files, setFiles] = useState(r.files)
+  const [error, setError] = useState('')
+  const detailLink = `#/solicitud/${r.id}`
+  if (view === 'evidencia') {
+    const editable = ['Pendiente de material', 'Requiere corrección'].includes(r.status) && s.material
+    return <><Heading title="Envía la evidencia del material" subtitle={`${r.id} · fotografías y ficha técnica`} action={<Badge>{r.status}</Badge>} />
+      {r.observation && <Notice warning><strong>Observación del administrador</strong><p>{r.observation}</p></Notice>}
+      <div className="columns wide-left"><Card>{editable ? <FilePicker files={files} onChange={setFiles} /> : <Notice>La evidencia no se puede modificar en el estado actual. Espera la revisión del administrador.</Notice>}</Card><Card><h2>Archivos adjuntos</h2><FilesList files={files} onRemove={editable ? i => setFiles(files.filter((_, index) => index !== i)) : undefined} /></Card></div>
+      <Notice>La evidencia sirve para revisión preliminar. La pieza será comprobada físicamente antes de instalarla. Entrega al técnico en el domicilio: propuesta académica, no procedimiento institucional autorizado.</Notice>
+      {error && <p role="alert" className="error">{error}</p>}<div className="actions"><a className="button secondary" href={detailLink}>Volver al detalle</a><button className="button" disabled={!editable} onClick={() => {
+        if (!files.some(f => f.category === 'Evidencia')) { setError('Selecciona al menos una fotografía o ficha técnica ficticia.'); return }
+        update(r.id, { files, status: 'Revisión de material', observation: '' }, 'Evidencia enviada', 'Pendiente de revisión preliminar simulada')
+        window.location.hash = `/solicitud/${r.id}`
+      }}>Enviar a revisión</button></div></>
+  }
+  if (view === 'pago') return <><Heading title="Pago del servicio" subtitle={`${r.id} · ${s.name}`} action={<Badge>{r.status}</Badge>} /><div className="columns wide-left"><Card><h2>Datos de pago de prueba</h2><Badge>Simulación: sin cargos reales</Badge><form className="payment-form" onSubmit={e => { e.preventDefault(); if (r.status !== 'Habilitada para pago' || r.paid) return; update(r.id, { paid: true, status: 'Pago registrado' }, 'Pago simulado registrado', 'Sin cargos reales. Comprobante demo disponible.'); window.location.hash = `/seguimiento/${r.id}` }}>
+      <Field label="Nombre de prueba" value="USUARIO DEMO" readOnly /><Field label="Número de tarjeta de prueba (no ingresar datos reales)" value="DATOS FICTICIOS · NO SE PROCESAN TARJETAS" readOnly /><div className="form-grid"><Field label="Vencimiento de prueba" value="MM / AA" readOnly /><Field label="Código de prueba" value="DEMO" readOnly /></div><Notice>Los campos son ficticios y de solo lectura. Este prototipo no solicita, almacena ni procesa datos financieros.</Notice><button className="button" disabled={r.status !== 'Habilitada para pago' || r.paid}>{r.paid ? 'Pago simulado registrado' : 'Simular pago'}</button>{r.status !== 'Habilitada para pago' && !r.paid && <p role="status">El administrador debe habilitar el pago después de la revisión.</p>}</form></Card>
+      <Card className="price-card"><h2>Resumen</h2><p>{s.name}</p><p>Total de referencia con IVA</p><strong className="price">{money(s.price)}</strong><p>Tarifa demo, no vigente confirmada. El comprobante simulado no tiene validez fiscal.</p><button className="button secondary" onClick={() => receipt(r)}>{r.paid ? 'Descargar comprobante simulado' : 'Ver comprobante de ejemplo'}</button><a href={detailLink}>Volver al detalle</a></Card></div></>
+  if (view === 'seguimiento') return <><Heading title={`Seguimiento · ${r.id}`} subtitle={s.name} action={<Badge>{r.status}</Badge>} /><div className="columns wide-left"><Card><h2>Historial de tu solicitud</h2><History request={r} /></Card><Card className="visit-summary"><h2>{r.status === 'Finalizada' ? 'Resultado de la visita' : 'Próxima visita'}</h2><dl><dt>Fecha tentativa</dt><dd>{r.visitDate ? new Date(r.visitDate).toLocaleString('es-SV') : 'Pendiente de coordinación'}</dd><dt>Coordinación</dt><dd>{r.coordination || 'El personal registrará la coordinación de prueba.'}</dd>{r.result && <><dt>Resultado del trabajo</dt><dd>{r.result}</dd></>}</dl>{s.material && <p>Ten disponible el material en el domicilio. El fontanero comprueba su compatibilidad y estado antes de instalarlo. Propuesta académica.</p>}{r.paid && <button className="button secondary" onClick={() => receipt(r)}>Ver comprobante simulado</button>}<a href={detailLink}>Volver al detalle</a></Card></div></>
+  return <><Heading title={`Tu solicitud · ${r.id}`} subtitle={s.name} action={<Badge>{r.status}</Badge>} />
+    {r.observation && <Notice warning><strong>Observación del administrador</strong><p>{r.observation}</p></Notice>}
+    <div className="columns wide-left"><Card className="specification-card"><h2>{s.material ? 'Especificaciones para tu cuenta de prueba' : 'Datos de tu solicitud'}</h2>
+      <dl>{s.material && <><dt>Pieza</dt><dd>{s.piece}</dd><dt>{s.id === 'caja' ? 'Compatibilidad' : 'Diámetro residencial'}</dt><dd>{s.id === 'caja' ? 'Según revisión de esta cuenta, sin dimensiones genéricas' : r.diameter || 'Pendiente de confirmación del administrador'}</dd><dt>Características</dt><dd>{r.specification || 'Recibirás las especificaciones después de la revisión. No compres todavía.'}</dd></>}<dt>NIS de prueba</dt><dd>{r.nis || 'Borrador sin NIS'}</dd><dt>Inmueble</dt><dd>{r.address || 'Pendiente'}</dd><dt>Motivo</dt><dd>{r.reason || 'Pendiente'}</dd></dl>
+      {s.material && r.specification && <button className="button secondary" onClick={() => downloadPdf(`Ficha-DEMO-${r.id}.pdf`, ['FICHA DE COMPRA DEMO - NO ES AUTORIZACION INSTITUCIONAL', r.id, s.piece, `Diametro: ${r.diameter || 'No aplica a caja'}`, ...r.specification.match(/.{1,75}/g) ?? [], '', 'Revision fotografica preliminar. Verificacion fisica en domicilio.', 'Compra y entrega en domicilio: propuesta academica.'])}>Descargar ficha de compra</button>}
+      <p>{s.material ? 'Cuando dispongas del material indicado, adjunta fotografías claras y su ficha técnica para revisión preliminar.' : 'La revisión de datos y documentos habilita el pago simulado; este servicio no requiere compra de material en la demostración.'}</p>
+      {r.files.length > 0 && <><h3>Documentos y evidencia de prueba</h3><FilesList files={r.files} /></>}
+    </Card><Card className="next-step"><h2>Siguiente paso</h2><NextStep request={r} /><a className="button secondary" href={`#/seguimiento/${r.id}`}>Ver seguimiento</a>{r.paid && <button className="button secondary" onClick={() => receipt(r)}>Descargar comprobante simulado</button>}</Card></div></>
+}
+function NextStep({ request: r }: { request: Request }) {
+  if (r.status === 'Borrador' || r.status === 'Corrección de datos') return <><p>{r.status === 'Borrador' ? 'Completa los datos y envía tu solicitud.' : 'Actualiza los datos indicados y vuelve a enviar la solicitud.'}</p><a className="button" href={`#/editar/${r.id}`}>{r.status === 'Borrador' ? 'Continuar borrador' : 'Corregir datos'}</a></>
+  if (r.status === 'Pendiente de material' || r.status === 'Requiere corrección') return <><p>{r.status === 'Requiere corrección' ? 'Revisa la observación y adjunta evidencia corregida.' : 'Compra la pieza siguiendo las especificaciones recibidas. Todavía no tienes que pagar la instalación.'}</p><a className="button" href={`#/evidencia/${r.id}`}>{r.status === 'Requiere corrección' ? 'Corregir evidencia' : 'Ya compré el material'}</a></>
+  if (r.status === 'Habilitada para pago') return <><p>La revisión está completa. Puedes continuar con el pago de prueba, sin cargos reales.</p><a className="button" href={`#/pago/${r.id}`}>Ir al pago simulado</a></>
+  if (r.status === 'Finalizada') return <p>Tu solicitud de prueba ha finalizado. Consulta el resultado y el historial de la visita.</p>
+  if (r.paid && r.physical === 'Requiere sustitución') return <><Notice warning>El material requiere sustitución y la instalación está pendiente. Revisa el resultado de la visita y coordina con el personal la sustitución y nueva comprobación en domicilio. No vuelvas a realizar el pago simulado.</Notice>{r.result && <p>{r.result}</p>}</>
+  if (r.paid) return <p>Pago simulado registrado. Consulta la coordinación y el avance de tu visita.</p>
+  return <p>El personal está revisando tu solicitud de prueba. Los cambios se reflejarán aquí; puedes continuar el flujo ingresando con las credenciales demo de administrador.</p>
+}

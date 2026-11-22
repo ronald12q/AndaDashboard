@@ -1,0 +1,167 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Ciudadano ANDA: crea su cuenta una sola vez con
+// nombre, correo, DUI y contraseña. Luego inicia sesión con DUI + contraseña.
+model Citizen {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  dui          String   @unique
+  passwordHash String
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  requests     ServiceRequest[]
+}
+
+model Administrator {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum ServiceType {
+  MEDIDOR
+  CAJA
+  VALVULA
+  RECONEXION
+  DESCONEXION
+  FUGA
+}
+
+enum RequestStatus {
+  BORRADOR
+  EN_REVISION
+  CORRECCION_DATOS
+  PENDIENTE_ESPECIFICACIONES
+  PENDIENTE_MATERIAL
+  REVISION_MATERIAL
+  CORRECCION_MATERIAL
+  HABILITADA_PAGO
+  PAGO_REGISTRADO
+  VISITA_PROGRAMADA
+  EN_EJECUCION
+  FINALIZADA
+}
+
+enum DisconnectionMode {
+  TEMPORAL
+  DEFINITIVA
+}
+
+enum RequestAction {
+  CREACION_BORRADOR
+  EDICION
+  ENVIO
+  REENVIO
+  SOLICITUD_CORRECCION
+  APROBACION_DATOS
+  ESPECIFICACIONES_ENVIADAS
+  ADJUNTO_AGREGADO
+  ADJUNTO_RETIRADO
+  EVIDENCIA_ENVIADA
+  CORRECCION_MATERIAL_SOLICITADA
+  EVIDENCIA_APROBADA
+  PAGO_SIMULADO_REGISTRADO
+  VISITA_PROGRAMADA
+  AVANCE_VISITA
+  SOLICITUD_FINALIZADA
+}
+
+enum PhysicalCheck {
+  PENDIENTE
+  COMPATIBLE
+  REQUIERE_SUSTITUCION
+}
+
+enum AttachmentCategory {
+  IDENTIFICACION
+  ESCRITURA
+  CARTA
+  REPRESENTACION
+  EVIDENCIA
+}
+
+enum MaterialDiameter {
+  MEDIA_PULGADA
+  TRES_CUARTOS
+}
+
+enum RequestActor {
+  CITIZEN
+  ADMIN
+}
+
+model ServiceRequest {
+  id           String             @id @default(cuid())
+  number       Int                @unique @default(autoincrement())
+  citizenId    String
+  citizen      Citizen            @relation(fields: [citizenId], references: [id], onDelete: Restrict)
+  service      ServiceType
+  status       RequestStatus      @default(BORRADOR)
+  version      Int                @default(1)
+  nis          String             @default("")
+  phone        String             @default("")
+  address      String             @default("")
+  reference    String             @default("")
+  reason       String             @default("")
+  mode         DisconnectionMode?
+  specification String?
+  diameter     MaterialDiameter?
+  paidAt       DateTime?
+  paymentCents Int?
+  visitDate    DateTime?
+  coordination String?
+  physical     PhysicalCheck?
+  result       String?
+  completedAt DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  history      RequestEvent[]
+  attachments  RequestAttachment[]
+
+  @@index([citizenId, number])
+  @@index([status, number])
+}
+
+model RequestAttachment {
+  id         String             @id @default(cuid())
+  requestId  String
+  request    ServiceRequest     @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  category   AttachmentCategory
+  filename   String
+  mime       String
+  size       Int
+  content    Bytes
+  version    Int
+  createdAt  DateTime           @default(now())
+
+  @@index([requestId, category])
+}
+
+model RequestEvent {
+  requestId String
+  request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  version   Int
+  action    RequestAction
+  status    RequestStatus
+  actorRole RequestActor
+  actorId   String
+  note      String?
+  createdAt DateTime       @default(now())
+
+  @@id([requestId, version])
+}

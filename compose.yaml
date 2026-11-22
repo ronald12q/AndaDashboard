@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${ANDA_DB_USER:-postgres}
+      POSTGRES_DB: ${ANDA_DB_NAME:-anda_db}
+      POSTGRES_PASSWORD: ${ANDA_DB_PASSWORD:?Define ANDA_DB_PASSWORD antes de iniciar PostgreSQL}
+    ports:
+      - "127.0.0.1:${ANDA_DB_PORT:-5432}:5432"
+    volumes:
+      - anda_postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  anda_postgres:
